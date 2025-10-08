@@ -1,0 +1,23 @@
+{
+  "name": "source-crdb-jdbc",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+
+    "connection.url": "jdbc:postgresql://cockroach:26258/app?sslmode=disable",
+    "connection.user": "root",
+
+    "mode": "timestamp",
+    "timestamp.column.name": "updated_at",
+    "validate.non.null": "true",
+
+    "table.whitelist": "orders",
+    "poll.interval.ms": "2000",
+
+    "topic.prefix": "orders_sql_",
+
+    "numeric.mapping": "best_fit",
+    "errors.tolerance": "all",
+    "errors.deadletterqueue.topic.name": "_dlq_crdb_source",
+    "errors.deadletterqueue.context.headers.enable": "true"
+  }
+}

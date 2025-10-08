@@ -1,0 +1,29 @@
+{
+  "name": "sink-crdb-jdbc-from-mongo",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "connection.url": "jdbc:postgresql://cockroach:26257/app?user=root&sslmode=disable",
+
+    "topics": "mongo.sales.orders",
+
+    "insert.mode": "upsert",
+    "pk.mode": "record_value",
+    "pk.fields": "id",
+
+    "table.name.format": "app.orders",
+    "auto.create": "true",
+    "auto.evolve": "true",
+    "dialect.name": "PostgreSqlDatabaseDialect",
+    "delete.enabled": "true",
+
+    "transforms": "RenameId,CastTypes",
+    "transforms.RenameId.type": "org.apache.kafka.connect.transforms.ReplaceField$Value",
+    "transforms.RenameId.renames": "_id:id",
+    "transforms.CastTypes.type": "org.apache.kafka.connect.transforms.Cast$Value",
+    "transforms.CastTypes.spec": "total:Decimal",
+
+    "errors.tolerance": "all",
+    "errors.deadletterqueue.topic.name": "_dlq_crdb_sink",
+    "errors.deadletterqueue.context.headers.enable": "true"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "sink-mongo-from-crdb",
+  "config": {
+    "connector.class": "com.mongodb.kafka.connect.MongoSinkConnector",
+    "topics": "orders_sql_orders",
+
+    "connection.uri": "mongodb://mongo:27017/?replicaSet=rs0",
+    "database": "mirror",
+    "collection": "orders_sql",
+
+    "writemodel.strategy": "com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneDefaultStrategy",
+
+    "document.id.strategy": "com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy",
+    "document.id.strategy.partial.value.projection": "id",
+    "document.id.strategy.partial.value.projection.type": "AllowList",
+
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+
+    "consumer.override.group.id": "sink-mongo-from-crdb-fix",
+    "consumer.override.auto.offset.reset": "earliest",
+
+    "errors.tolerance": "all",
+    "errors.deadletterqueue.topic.name": "_dlq_mongo_sink",
+    "errors.deadletterqueue.topic.replication.factor": "1",
+    "errors.deadletterqueue.topic.partitions": "1",
+    "errors.deadletterqueue.context.headers.enable": "true"
+  }
+}
