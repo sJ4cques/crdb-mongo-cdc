@@ -1,15 +1,18 @@
+version: "3.8"
+
 services:
+  # CockroachDB (v24.x) — puerto SQL expuesto: 26258 (mapeado a 26259 en host)
   cockroach:
     image: cockroachdb/cockroach:v24.2.0
     command:
       - start-single-node
       - --insecure
-      - --listen-addr=localhost:26257     # requerido por v24.x
-      - --sql-addr=0.0.0.0:26258          # SQL expuesto (puerto distinto)
-      - --http-addr=0.0.0.0:8080          # UI
+      - --listen-addr=localhost:26257
+      - --sql-addr=0.0.0.0:26258
+      - --http-addr=0.0.0.0:8080
     ports:
-      - "26259:26258"   # host:26259 -> cont:26258 (SQL)
-      - "8088:8080"     # host:8088 -> cont:8080 (UI)
+      - "26259:26258"      # host:26259 -> cont:26258 (SQL)
+      - "8088:8080"        # UI
     volumes:
       - crdb-data:/cockroach/cockroach-data
     healthcheck:
@@ -19,21 +22,39 @@ services:
       retries: 20
     restart: unless-stopped
 
-  mongo:
-    image: mongo:7.0
-    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
-    ports:
-      - "27017:27017"
+  # Inicializador one-shot para Cockroach (crea DB/tabla)
+  crdb-init:
+    image: cockroachdb/cockroach:v24.2.0
+    depends_on:
+      cockroach:
+        condition: service_healthy
     volumes:
-      - mongo-data:/data/db
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./sql/crdb-init.sql:/init.sql:ro
+    entrypoint: ["/bin/sh","-lc"]
+    command: >
+      "cockroach sql --insecure --host=cockroach:26258 -f /init.sql || true"
+    restart: "no"
+
+  # PostgreSQL
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=app
+      - POSTGRES_USER=app
+      - POSTGRES_PASSWORD=app
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./sql/postgres-init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
+      test: ["CMD-SHELL","pg_isready -U app -d app"]
       interval: 5s
       timeout: 5s
       retries: 30
     restart: unless-stopped
 
+  # Redpanda = Kafka
   redpanda:
     image: docker.redpanda.com/redpandadata/redpanda:v24.1.9
     command:
@@ -47,8 +68,8 @@ services:
       - --kafka-addr=PLAINTEXT://0.0.0.0:9092
       - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
     ports:
-      - "9092:9092"   # Kafka API
-      - "9644:9644"   # Admin API
+      - "9092:9092"
+      - "9644:9644"
     restart: unless-stopped
 
   redpanda-console:
@@ -56,11 +77,12 @@ services:
     environment:
       - KAFKA_BROKERS=redpanda:9092
     ports:
-      - "8081:8080"   # UI de tópicos
+      - "8081:8080"
     depends_on:
       - redpanda
     restart: unless-stopped
 
+  # Kafka Connect con plugins JDBC
   connect:
     build:
       context: ./connect
@@ -68,16 +90,12 @@ services:
     environment:
       - CONNECT_BOOTSTRAP_SERVERS=redpanda:9092
       - CONNECT_GROUP_ID=connect-cluster
-
-      # REST: escucha y anuncia correctamente
       - CONNECT_REST_PORT=8083
       - CONNECT_LISTENERS=http://0.0.0.0:8083
       - CONNECT_REST_ADVERTISED_HOST_NAME=connect
       - CONNECT_REST_ADVERTISED_PORT=8083
-      # (opcional/compatible) si lo quieres, puedes dejar también:
-      # - CONNECT_REST_ADVERTISED_LISTENERS=http://connect:8083
 
-      # Topics internos + RF=1 (1 broker)
+      # topics internos
       - CONNECT_CONFIG_STORAGE_TOPIC=_connect_configs
       - CONNECT_OFFSET_STORAGE_TOPIC=_connect_offsets
       - CONNECT_STATUS_STORAGE_TOPIC=_connect_status
@@ -85,16 +103,13 @@ services:
       - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
       - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
 
-      # Converters JSON sin schema
+      # JSON sin schema
       - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
       - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
       - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
       - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
 
-      # Plugins (JDBC / Mongo)
       - CONNECT_PLUGIN_PATH=/usr/share/java,/usr/share/confluent-hub-components
-
-      # Logging y memoria
       - CONNECT_LOG4J_LOGGERS=org.reflections=ERROR
       - JAVA_TOOL_OPTIONS=-Xms512m -Xmx1024m
     ports:
@@ -102,9 +117,10 @@ services:
     depends_on:
       - redpanda
       - cockroach
-      - mongo
+      - postgres
+      - crdb-init
     restart: unless-stopped
 
 volumes:
   crdb-data:
-  mongo-data:
+  pg-data:

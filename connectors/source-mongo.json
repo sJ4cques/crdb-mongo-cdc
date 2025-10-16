@@ -1,17 +1,23 @@
 {
   "name": "source-mongo",
   "config": {
-    "connector.class": "io.debezium.connector.mongodb.MongoDbConnector",
-    "mongodb.hosts": "rs0/mongo:27017",
-    "mongodb.name": "mongo_cdc",
-    "mongodb.members.auto.discover": "false",
+    "connector.class": "com.mongodb.kafka.connect.MongoSourceConnector",
 
-    "collection.include.list": "sales.orders",
-    "topic.prefix": "mongo",
+    "connection.uri": "mongodb://mongo:27017/?replicaSet=rs0",
+    "database": "sales",
+    "collection": "orders",
 
+    "topic.prefix": "mongo",                
     "publish.full.document.only": "true",
 
-    "max.batch.size": "2048",
-    "max.queue.size": "8192"
+
+    "copy.existing": "true",
+
+
+    "output.format.value": "json",
+    "output.format.key": "json",
+
+
+    "pipeline": "[]"
   }
 }

@@ -1,9 +1,10 @@
 {
-  "name": "source-crdb-jdbc",
+  "name": "source-pg-jdbc",
   "config": {
     "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
-    "connection.url": "jdbc:postgresql://cockroach:26258/app?sslmode=disable",
-    "connection.user": "root",
+    "connection.url": "jdbc:postgresql://postgres:5432/app",
+    "connection.user": "app",
+    "connection.password": "app",
 
     "mode": "timestamp",
     "timestamp.column.name": "updated_at",
@@ -12,11 +13,11 @@
     "poll.interval.ms": "2000",
     "numeric.mapping": "best_fit",
 
-    "query": "SELECT id, customer, total, origin, updated_at FROM orders WHERE origin = 'crdb' AND updated_at > ? ORDER BY updated_at ASC",
-    "topic.prefix": "crdb_orders",
+    "query": "SELECT id, customer, total, origin, updated_at FROM public.orders WHERE origin = 'pg' AND updated_at > ? ORDER BY updated_at ASC",
+    "topic.prefix": "pg_public.orders",
 
     "errors.tolerance": "all",
-    "errors.deadletterqueue.topic.name": "_dlq_source_crdb",
+    "errors.deadletterqueue.topic.name": "_dlq_source_pg",
     "errors.deadletterqueue.topic.replication.factor": "1",
     "errors.deadletterqueue.context.headers.enable": "true"
   }

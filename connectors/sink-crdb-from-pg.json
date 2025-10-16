@@ -1,0 +1,30 @@
+{
+  "name": "sink-crdb-from-pg",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+
+    "connection.url": "jdbc:postgresql://cockroach:26258/app?sslmode=disable",
+    "connection.user": "root",
+
+    "topics": "pg_public.orders",
+
+    "insert.mode": "upsert",
+    "pk.mode": "record_value",
+    "pk.fields": "id",
+
+    "table.name.format": "app.orders",
+    "auto.create": "true",
+    "auto.evolve": "true",
+    "dialect.name": "PostgreSqlDatabaseDialect",
+    "delete.enabled": "false",
+
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "false",
+
+    "errors.tolerance": "all",
+    "errors.deadletterqueue.topic.name": "_dlq_sink_crdb",
+    "errors.deadletterqueue.context.headers.enable": "true"
+  }
+}
