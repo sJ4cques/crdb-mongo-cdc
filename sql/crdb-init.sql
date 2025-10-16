@@ -8,8 +8,7 @@ CREATE TABLE IF NOT EXISTS orders (
   total DECIMAL(18,2) NOT NULL DEFAULT 0.00,
   origin STRING NOT NULL DEFAULT 'crdb',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now() ON UPDATE now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_orders_updated_at ON orders(updated_at);
-docker compose ps
